@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 METHOD_COLORS = {"bf16": "#a3a29b", "gptq": "#2a78d6", "awq": "#1baf7a", "mxfp4": "#eb6834"}
 # bf16과의 차이를 방법 색 빗금으로 표시
 BF16_HATCH = "////"
+ENTROPY_COLORS = {"low": "#9ecae1", "high": "#08519c"}
+ENTROPY_LABELS = {"low": "저엔트로피 위치", "high": "고엔트로피 위치"}
 ACCURACY_YMAX = 1.15
 BAR_INCHES = 0.45
 BAR_GAP = 1
