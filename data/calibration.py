@@ -17,14 +17,14 @@ from utils.paths import make_hub_path
 @dataclass
 class Config:
     seed: int = 0
-    num_problems: int = 128
+    num_calibration_problems: int = 128
     max_generation_len: int = 2048
     # calibration reasoning을 쓸 모델
     model_name: str = "Qwen/Qwen3-0.6B"
 
 
 def load_numina(
-    num_problems: int,
+    num_calibration_problems: int,
     seed: int,
 ) -> list[str]:
     dataset = load_dataset("AI-MO/NuminaMath-1.5", split="train").shuffle(seed=seed)
@@ -34,7 +34,7 @@ def load_numina(
         if row["synthetic"] or row["question_type"] != "math-word-problem" or row["problem_is_valid"] != "Yes":
             continue
         prompts.append(MATH_PROMPT.format(problem=row["problem"]))
-        if len(prompts) == num_problems:
+        if len(prompts) == num_calibration_problems:
             break
     return prompts
 
@@ -43,11 +43,11 @@ def main() -> None:
     config = parse(Config)
     experiment_name = "calibration/numina"
     hub_path = make_hub_path("bf16", config.model_name)
-    file_name = f"num_problems={config.num_problems},max_generation_len={config.max_generation_len},seed={config.seed}"
+    file_name = f"num_calibration_problems={config.num_calibration_problems},max_generation_len={config.max_generation_len},seed={config.seed}"
     if tensors_exist(experiment_name, hub_path, file_name):
         print(f"{hub_path} already generated")
         return
-    prompts = load_numina(config.num_problems, config.seed)
+    prompts = load_numina(config.num_calibration_problems, config.seed)
     model = load_vllm(config.model_name, config.model_name)
     tokenizer = model.get_tokenizer()
 

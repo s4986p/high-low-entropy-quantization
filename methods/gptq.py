@@ -23,7 +23,7 @@ class Config:
     damp_ratio: float = 0.01
     model_name: str = "Qwen/Qwen3-0.6B"
     # calibration 데이터
-    num_problems: int = 128
+    num_calibration_problems: int = 128
     max_generation_len: int = 2048
     seed: int = 0
     max_calibration_len: int = 2048
@@ -75,7 +75,7 @@ def quantize_weight(
 def main() -> None:
     config = parse(Config)
     model = load_model(config.model_name)
-    calibration_ids = load_calibration(config.model_name, config.num_problems, config.max_generation_len, config.seed, config.max_calibration_len)
+    calibration_ids = load_calibration(config.model_name, config.num_calibration_problems, config.max_generation_len, config.seed, config.max_calibration_len)
     layers = model.model.layers
 
     start_time = time.perf_counter()
@@ -90,7 +90,7 @@ def main() -> None:
         start_time = time.perf_counter()
         torch.cuda.reset_peak_memory_stats()
 
-    save_model(make_hub_path("gptq", config.model_name, config.num_bits, config.group_size, config.num_problems), model)
+    save_model(make_hub_path("gptq", config.model_name, config.num_bits, config.group_size, config.num_calibration_problems), model)
 
 
 if __name__ == "__main__":
