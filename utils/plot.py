@@ -107,7 +107,7 @@ def plot_words(
     xlabel: str,
 ) -> None:
     words = sorted(bf16_rates.keys() | quantized_rates.keys(), key=lambda word: quantized_rates.get(word, 0) - bf16_rates.get(word, 0), reverse=True)
-    word_groups = [("늘어난 단어", words[:num_words]), ("줄어든 단어", words[::-1][:num_words]), ("의심, 분기, 확인 단어", MARKER_WORDS)]
+    word_groups = [("늘어난 단어", words[:num_words]), ("줄어든 단어", words[::-1][:num_words]), ("overthinking, 확인 단어", MARKER_WORDS)]
     word_width = 2 + BAR_GAP
     num_slots = max(len(group_words) for _, group_words in word_groups)
     for ax, (title, group_words) in zip(axes, word_groups):
