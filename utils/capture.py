@@ -11,7 +11,7 @@ class StopForward(Exception):
 def capture_layer_inputs(
     model: PreTrainedModel,
     layer: Module,
-    chunks: list[Tensor],
+    calibration_ids: list[Tensor],
 ) -> list[tuple[tuple, dict]]:
     layer_inputs = []
 
@@ -24,7 +24,7 @@ def capture_layer_inputs(
         raise StopForward
 
     handle = layer.register_forward_pre_hook(hook, with_kwargs=True)
-    for input_ids in chunks:
+    for input_ids in calibration_ids:
         try:
             model(input_ids[None, :].to(model.device), use_cache=False)
         except StopForward:
