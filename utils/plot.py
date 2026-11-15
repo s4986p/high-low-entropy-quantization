@@ -12,6 +12,9 @@ BAR_INCHES = 0.45
 BAR_GAP = 1
 PANEL_HEIGHT = 3.0
 PANEL_MARGIN = 0.9
+MARKER_WORDS = ["wait", "but", "however", "hmm", "wrong", "alternatively", "maybe", "perhaps", "verify", "confirm", "remember", "sure"]
+WORD_BAR_INCHES = 0.12
+WORD_PANEL_WIDTH = 4.5
 
 plt.rcParams.update({
     "font.family": "Apple SD Gothic Neo",
@@ -69,6 +72,42 @@ def plot_bars(
             ax.annotate(text, (x, top), xytext=(0, 3), textcoords="offset points", ha="center", va="bottom", fontsize=8)
     ax.set_xticks([case_index * case_width for case_index in range(len(case_labels))], case_labels)
     ax.set_xlim(-case_width / 2, (len(case_labels) - 0.5) * case_width)
+
+
+def get_words_figsize(
+    num_words: int,
+    num_rows: int,
+) -> tuple[float, float]:
+    row_height = WORD_BAR_INCHES * max(num_words, len(MARKER_WORDS)) * (2 + BAR_GAP) + 1.2
+    return WORD_PANEL_WIDTH * 3, row_height * num_rows + 1
+
+
+def plot_words(
+    axes: list[Axes],
+    bf16_rates: dict[str, float],
+    quantized_rates: dict[str, float],
+    method: str,
+    num_words: int,
+    xlabel: str,
+) -> None:
+    words = sorted(bf16_rates.keys() | quantized_rates.keys(), key=lambda word: quantized_rates.get(word, 0) - bf16_rates.get(word, 0), reverse=True)
+    word_groups = [("늘어난 단어", words[:num_words]), ("줄어든 단어", words[::-1][:num_words]), ("의심, 분기, 확인 단어", MARKER_WORDS)]
+    word_width = 2 + BAR_GAP
+    num_slots = max(len(group_words) for _, group_words in word_groups)
+    for ax, (title, group_words) in zip(axes, word_groups):
+        for series_index, (color, rates) in enumerate([(METHOD_COLORS["bf16"], bf16_rates), (METHOD_COLORS[method], quantized_rates)]):
+            ys = [word_index * word_width + series_index - 0.5 for word_index in range(len(group_words))]
+            ax.barh(ys, [rates.get(word, 0) for word in group_words], height=1, color=color)
+        for word_index, word in enumerate(group_words):
+            bf16_rate, quantized_rate = bf16_rates.get(word, 0), quantized_rates.get(word, 0)
+            ax.annotate(f"{quantized_rate / bf16_rate:.2f}배" if bf16_rate else "새 단어", (max(bf16_rate, quantized_rate), word_index * word_width), xytext=(4, 0), textcoords="offset points", va="center", fontsize=8)
+        ax.set_yticks([word_index * word_width for word_index in range(len(group_words))], group_words)
+        ax.set_ylim((num_slots - 0.5) * word_width, -word_width / 2)
+        ax.margins(x=0.2)
+        ax.grid(axis="x")
+        ax.grid(axis="y", visible=False)
+        ax.set_title(title)
+        ax.set_xlabel(xlabel)
 
 
 def fit_bar_width(
