@@ -7,8 +7,9 @@ from utils.model import GENERATION_CONFIGS
 def load_vllm(
     model_path: str,
     model_name: str,
+    hf_overrides: dict | None = None,
 ) -> LLM:
-    return LLM(model_path, tokenizer=model_name, dtype="bfloat16", max_model_len=40960)
+    return LLM(model_path, tokenizer=model_name, dtype="bfloat16", max_model_len=40960, hf_overrides=hf_overrides)
 
 
 def get_sampling_params(

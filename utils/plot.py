@@ -1,3 +1,4 @@
+import math
 from pathlib import Path
 
 from matplotlib.axes import Axes
@@ -80,7 +81,7 @@ def plot_bars(
     for series_index, (values, color, texts) in enumerate(series):
         xs = [case_index * case_width + series_index - (len(series) - 1) / 2 for case_index in range(len(case_labels))]
         if bf16_values is not None:
-            ax.bar(xs, [bf16_values[series_index]] * len(xs), width=1, facecolor="white", edgecolor=color, hatch=BF16_HATCH, linewidth=0)
+            ax.bar(xs, [math.nan if math.isnan(value) else bf16_values[series_index] for value in values], width=1, facecolor="white", edgecolor=color, hatch=BF16_HATCH, linewidth=0)
         ax.bar(xs, values, width=1, color=color)
         for x, value, text in zip(xs, values, texts):
             top = max(value, 0 if bf16_values is None else bf16_values[series_index])
