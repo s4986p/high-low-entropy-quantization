@@ -57,6 +57,19 @@ def get_figsize(
     return sum(panel_widths) + PANEL_MARGIN * len(panel_widths), PANEL_HEIGHT * num_rows + 1
 
 
+def format_accuracy(
+    accuracy: float,
+    bf16_accuracy: float,
+) -> str:
+    return f"{accuracy:.1%}\n{round(accuracy - bf16_accuracy, 3) + 0.0:+.1%}p"
+
+
+def get_accuracy(
+    result: dict,
+) -> float:
+    return result["accuracy"]
+
+
 def plot_bars(
     ax: Axes,
     case_labels: list[str],

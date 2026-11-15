@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from statistics import mean, median
+from statistics import mean
 from typing import Literal
 
 from matplotlib.patches import Patch
@@ -8,8 +8,9 @@ from matplotlib.ticker import MultipleLocator, PercentFormatter, StrMethodFormat
 from simple_parsing import parse
 
 from utils.hub import load_result
+from utils.metrics import get_length_ratio, get_loop_ratio, get_truncated_ratio
 from utils.paths import make_hub_path
-from utils.plot import ACCURACY_YMAX, BF16_HATCH, METHOD_COLORS, fit_bar_width, get_figsize, get_panel_width, plot_bars, save_figure
+from utils.plot import ACCURACY_YMAX, BF16_HATCH, METHOD_COLORS, fit_bar_width, format_accuracy, get_accuracy, get_figsize, get_panel_width, plot_bars, save_figure
 
 
 @dataclass
@@ -21,44 +22,6 @@ class Config:
     num_calibration_problems: int = 128
     max_generation_len: int = 32768
     seeds: tuple[int, ...] = (0,)
-
-
-def format_accuracy(
-    accuracy: float,
-    bf16_accuracy: float,
-) -> str:
-    return f"{accuracy:.1%}\n{round(accuracy - bf16_accuracy, 3) + 0.0:+.1%}p"
-
-
-def get_accuracy(
-    result: dict,
-) -> float:
-    return result["accuracy"]
-
-
-def get_truncated_ratio(
-    result: dict,
-) -> float:
-    return mean(truncated and not correct for correct, truncated in zip(result["corrects"], result["truncateds"]))
-
-
-def is_loop(
-    text: str | None,
-) -> bool:
-    return text is not None and len(text) > 200 and text[:-200].count(text[-200:-150]) >= 5
-
-
-def get_loop_ratio(
-    result: dict,
-) -> float:
-    return mean(is_loop(reasoning) or is_loop(response) for reasoning, response in zip(result["reasonings"], result["responses"]))
-
-
-def get_length_ratio(
-    result: dict,
-    bf16_result: dict,
-) -> float:
-    return median(reasoning_len / bf16_reasoning_len for reasoning_len, bf16_reasoning_len, correct, bf16_correct in zip(result["reasoning_lens"], bf16_result["reasoning_lens"], result["corrects"], bf16_result["corrects"]) if correct and bf16_correct)
 
 
 def main() -> None:
