@@ -7,6 +7,8 @@ from matplotlib.ticker import MultipleLocator, PercentFormatter, StrMethodFormat
 
 MODEL_NAMES = {"Qwen/Qwen3-0.6B": "qwen3-0.6b", "Qwen/Qwen3-1.7B": "qwen3-1.7b"}
 METHOD_COLORS = {"bf16": "#a3a29b", "gptq": "#2a78d6", "awq": "#1baf7a", "mxfp4": "#eb6834"}
+ENTROPY_NAMES = {"low": "저엔트로피 위치", "high": "고엔트로피 위치"}
+ENTROPY_COLORS = {"low": "#9ecae1", "high": "#08519c"}
 BAR_INCHES = 0.45
 BAR_GAP = 1
 PANEL_HEIGHT = 3.0
@@ -21,8 +23,10 @@ RATIO_YMAX = 0.3
 LENGTH_YMAX = 2.0
 # bf16 대비 배는 0.5배 간격 눈금
 RATIO_YTICK = 0.5
-# case가 적어도 제목이 잘리지 않는 너비
+# case가 적어도 제목과 범례가 잘리지 않는 너비
 MIN_FIGURE_WIDTH = 9.0
+# 막대 위 값이 그림 밖으로 잘리지 않게 y축 위 여백 비율
+VALUE_MARGIN = 0.15
 # 막대 위 값 글자 크기와 막대에서 띄우는 point 수
 VALUE_FONTSIZE = 8
 VALUE_OFFSET = 3
@@ -72,12 +76,20 @@ def get_title(
     return f"{MODEL_NAMES[model_name]} math500 {experiment_name}"
 
 
-def get_figsize(
+def get_panel_width(
     num_cases: int,
-    num_panels: int,
+    num_series: int,
+) -> float:
+    # case마다 series 막대와 간격
+    return BAR_INCHES * num_cases * (num_series + BAR_GAP)
+
+
+def get_figsize(
+    panel_widths: list[float],
+    num_rows: int,
 ) -> tuple[float, float]:
-    # panel을 가로로 놓고, case마다 막대 하나와 간격
-    return max((BAR_INCHES * (1 + BAR_GAP) * num_cases + PANEL_MARGIN) * num_panels, MIN_FIGURE_WIDTH), PANEL_HEIGHT + 1
+    # panel을 가로로, 묶음을 세로로 놓음
+    return max(sum(panel_widths) + PANEL_MARGIN * len(panel_widths), MIN_FIGURE_WIDTH), PANEL_HEIGHT * num_rows + 1
 
 
 def format_value(
@@ -93,22 +105,25 @@ def format_value(
     return f"{value:.2f}{unit}"
 
 
-def plot_method_bars(
+def plot_bars(
     ax: Axes,
-    methods: list[str],
-    values: list[float],
+    cases: list[str],
+    series: list[tuple[list[float], str | list[str]]],
     unit: str,
 ) -> None:
-    # 방법마다 방법 색 막대를 그리고 막대 위에 format_value로 값 표시
-    case_width = 1 + BAR_GAP
-    xs = [method_index * case_width for method_index in range(len(methods))]
-    ax.bar(xs, values, width=1, color=[METHOD_COLORS[method] for method in methods])
-    for x, value in zip(xs, values):
-        ax.annotate(format_value(value, unit), (x, max(value, 0)), xytext=(0, VALUE_OFFSET), textcoords="offset points", ha="center", va="bottom", fontsize=VALUE_FONTSIZE)
+    # case마다 series 막대를 나란히 그리고 막대 위에 format_value로 값 표시
+    # series는 (값, 색), 색이 list면 case마다 다른 색
+    # 예시) cases ["숫자", "기호"], series [(저엔트로피 위치 값, 연한 파랑), (고엔트로피 위치 값, 진한 파랑)]
+    case_width = len(series) + BAR_GAP
+    for series_index, (values, color) in enumerate(series):
+        xs = [case_index * case_width + series_index - (len(series) - 1) / 2 for case_index in range(len(cases))]
+        ax.bar(xs, values, width=1, color=color)
+        for x, value in zip(xs, values):
+            ax.annotate(format_value(value, unit), (x, max(value, 0)), xytext=(0, VALUE_OFFSET), textcoords="offset points", ha="center", va="bottom", fontsize=VALUE_FONTSIZE)
     # 배는 1배가 기준
     ax.axhline(1 if unit == "배" else 0, color=NEUTRAL_COLOR, linewidth=BASELINE_WIDTH)
-    ax.set_xticks(xs, methods)
-    ax.set_xlim(-case_width / 2, (len(methods) - 0.5) * case_width)
+    ax.set_xticks([case_index * case_width for case_index in range(len(cases))], cases)
+    ax.set_xlim(-case_width / 2, (len(cases) - 0.5) * case_width)
     if unit in PERCENT_UNITS:
         ax.yaxis.set_major_formatter(PercentFormatter(1, decimals=0, symbol=unit))
     if unit == "배":

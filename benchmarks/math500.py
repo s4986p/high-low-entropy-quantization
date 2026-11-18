@@ -3,13 +3,12 @@ from statistics import mean
 import time
 from typing import Literal
 
-from datasets import load_dataset
 import math_verify
 from simple_parsing import parse
 from vllm.outputs import CompletionOutput  # type: ignore
 from vllm.tokenizers import TokenizerLike  # type: ignore
 
-from utils.dataset import MATH_PROMPT
+from utils.dataset import load_math500
 from utils.evaluation import generate_vllm, load_vllm
 from utils.format import format_duration
 from utils.hub import download_model, result_exists, save_result
@@ -26,11 +25,6 @@ class Config:
     num_calibration_problems: int = 128
     max_generation_len: int = 32768
     seeds: tuple[int, ...] = (0,)
-
-
-def load_math500() -> list[tuple[str, str]]:
-    dataset = load_dataset("HuggingFaceH4/MATH-500", split="test")
-    return [(MATH_PROMPT.format(problem=row["problem"]), row["answer"]) for row in dataset]
 
 
 def parse_math500_prediction(
