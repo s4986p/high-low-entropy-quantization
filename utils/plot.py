@@ -29,6 +29,15 @@ VALUE_OFFSET = 3
 # 기준선 회색
 NEUTRAL_COLOR = "#808080"
 BASELINE_WIDTH = 0.8
+# 단어 plot은 가로 막대, 단어마다 bf16과 양자화 모델 막대 둘
+OVERTHINKING_WORDS = ["wait", "but", "however", "hmm", "wrong", "alternatively", "maybe", "perhaps"]
+CHECK_WORDS = ["verify", "confirm", "remember", "sure"]
+WORD_BAR_INCHES = 0.12
+WORD_PANEL_WIDTH = 4.5
+# 단어 plot 한 행의 제목과 x축 눈금 높이
+WORD_ROW_MARGIN = 1.2
+# 막대 옆 배가 잘리지 않게 x축 오른쪽 여백 비율
+WORD_VALUE_MARGIN = 0.2
 
 plt.rcParams.update({
     "font.family": "Apple SD Gothic Neo",
@@ -105,6 +114,46 @@ def plot_method_bars(
     if unit == "배":
         ax.yaxis.set_major_locator(MultipleLocator(RATIO_YTICK))
         ax.yaxis.set_major_formatter(StrMethodFormatter("{x:.1f}배"))
+
+
+def get_words_figsize(
+    num_words: int,
+    num_rows: int,
+) -> tuple[float, float]:
+    # 단어 묶음 3개를 가로로, 방법을 세로로 놓음
+    row_height = WORD_BAR_INCHES * max(num_words, len(OVERTHINKING_WORDS + CHECK_WORDS)) * (2 + BAR_GAP) + WORD_ROW_MARGIN
+    return WORD_PANEL_WIDTH * 3, row_height * num_rows + 1
+
+
+def plot_words(
+    axes: list[Axes],
+    bf16_rates: dict[str, float],
+    quantized_rates: dict[str, float],
+    method: str,
+    num_words: int,
+) -> None:
+    # 늘어난 단어, 줄어든 단어, overthinking과 확인 단어 panel에 bf16과 양자화 모델의 단어 빈도를 나란히 그림
+    # 늘어난 단어와 줄어든 단어는 단어 빈도 차이 순, 막대 옆에 bf16 대비 배 표시
+    words = sorted(bf16_rates.keys() | quantized_rates.keys(), key=lambda word: quantized_rates.get(word, 0) - bf16_rates.get(word, 0), reverse=True)
+    word_groups = [("늘어난 단어", words[:num_words]), ("줄어든 단어", words[::-1][:num_words]), ("overthinking, 확인 단어", OVERTHINKING_WORDS + CHECK_WORDS)]
+    word_width = 2 + BAR_GAP
+    num_slots = max(len(group_words) for _, group_words in word_groups)
+    for ax, (title, group_words) in zip(axes, word_groups):
+        for series_index, (color, rates) in enumerate([(METHOD_COLORS["bf16"], bf16_rates), (METHOD_COLORS[method], quantized_rates)]):
+            ys = [word_index * word_width + series_index - 0.5 for word_index in range(len(group_words))]
+            ax.barh(ys, [rates.get(word, 0) for word in group_words], height=1, color=color)
+        for word_index, word in enumerate(group_words):
+            bf16_rate, quantized_rate = bf16_rates.get(word, 0), quantized_rates.get(word, 0)
+            # bf16이 쓰지 않은 단어는 배 대신 "새 단어"
+            text = format_value(quantized_rate / bf16_rate, "배") if bf16_rate else "새 단어"
+            ax.annotate(text, (max(bf16_rate, quantized_rate), word_index * word_width), xytext=(VALUE_OFFSET, 0), textcoords="offset points", va="center", fontsize=VALUE_FONTSIZE)
+        ax.set_yticks([word_index * word_width for word_index in range(len(group_words))], group_words)
+        ax.set_ylim((num_slots - 0.5) * word_width, -word_width / 2)
+        ax.margins(x=WORD_VALUE_MARGIN)
+        ax.grid(axis="x")
+        ax.grid(axis="y", visible=False)
+        ax.set_title(title)
+        ax.set_xlabel("단어 빈도")
 
 
 def save_figure(
