@@ -1,3 +1,4 @@
+import math
 from pathlib import Path
 
 from matplotlib.axes import Axes
@@ -33,6 +34,8 @@ VALUE_OFFSET = 3
 # 기준선 회색
 NEUTRAL_COLOR = "#808080"
 BASELINE_WIDTH = 0.8
+# bf16과 bf16 샘플링 없는 양자화 모델은 막대 대신 점선
+REFERENCE_LINESTYLE = "--"
 # 단어 plot은 가로 막대, 단어마다 bf16과 양자화 모델 막대 둘
 OVERTHINKING_WORDS = ["wait", "but", "however", "hmm", "wrong", "alternatively", "maybe", "perhaps"]
 CHECK_WORDS = ["verify", "confirm", "remember", "sure"]
@@ -113,13 +116,25 @@ def plot_bars(
 ) -> None:
     # case마다 series 막대를 나란히 그리고 막대 위에 format_value로 값 표시
     # series는 (값, 색), 색이 list면 case마다 다른 색
+    # 값이 nan이면 그 막대는 비워 둠
     # 예시) cases ["숫자", "기호"], series [(저엔트로피 위치 값, 연한 파랑), (고엔트로피 위치 값, 진한 파랑)]
     case_width = len(series) + BAR_GAP
     for series_index, (values, color) in enumerate(series):
         xs = [case_index * case_width + series_index - (len(series) - 1) / 2 for case_index in range(len(cases))]
         ax.bar(xs, values, width=1, color=color)
         for x, value in zip(xs, values):
-            ax.annotate(format_value(value, unit), (x, max(value, 0)), xytext=(0, VALUE_OFFSET), textcoords="offset points", ha="center", va="bottom", fontsize=VALUE_FONTSIZE)
+            if not math.isnan(value):
+                ax.annotate(format_value(value, unit), (x, max(value, 0)), xytext=(0, VALUE_OFFSET), textcoords="offset points", ha="center", va="bottom", fontsize=VALUE_FONTSIZE)
+    set_bar_axis(ax, cases, case_width, unit)
+
+
+def set_bar_axis(
+    ax: Axes,
+    cases: list[str],
+    case_width: int,
+    unit: str,
+) -> None:
+    # 기준선, case 눈금, unit에 맞는 y축 눈금 설정
     # 배는 1배가 기준
     ax.axhline(1 if unit == "배" else 0, color=NEUTRAL_COLOR, linewidth=BASELINE_WIDTH)
     ax.set_xticks([case_index * case_width for case_index in range(len(cases))], cases)

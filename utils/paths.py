@@ -14,8 +14,13 @@ def make_hub_path(
 def make_result_name(
     max_generation_len: int,
     seed: int,
+    bf16_position: str | None = None,
+    bf16_ratio: float | None = None,
 ) -> str:
-    return f"max_generation_len={max_generation_len},seed={seed}"
+    # bf16 샘플링은 앞에 bf16_position과 bf16_ratio 추가
+    # 예시) "bf16_position=high,bf16_ratio=0.2,max_generation_len=32768,seed=0"
+    prefix = "" if bf16_position is None else f"bf16_position={bf16_position},bf16_ratio={bf16_ratio},"
+    return f"{prefix}max_generation_len={max_generation_len},seed={seed}"
 
 
 def make_calibration_name(

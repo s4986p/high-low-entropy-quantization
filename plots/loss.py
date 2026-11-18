@@ -1,18 +1,14 @@
 from dataclasses import dataclass
-from statistics import mean, median
+from statistics import mean
 from typing import Literal
 
 import matplotlib.pyplot as plt
 from simple_parsing import parse
 
 from utils.hub import load_results
+from utils.metrics import get_accuracy, get_length_ratio, get_loop_ratio, get_truncated_ratio
 from utils.paths import make_hub_path
 from utils.plot import ACCURACY_YMAX, LENGTH_YMAX, METHOD_COLORS, RATIO_YMAX, get_figsize, get_panel_width, get_title, plot_bars, save_figure
-
-# 반복: 끝에서 LOOP_TAIL_LEN번째부터 LOOP_PATTERN_LEN 글자가 그 앞에 MIN_LOOP_COUNT번 이상 나옴
-LOOP_TAIL_LEN = 200
-LOOP_PATTERN_LEN = 50
-MIN_LOOP_COUNT = 5
 
 
 @dataclass
@@ -24,38 +20,6 @@ class Config:
     num_calibration_problems: int = 128
     max_generation_len: int = 32768
     seeds: tuple[int, ...] = (0,)
-
-
-def get_accuracy(
-    result: dict,
-) -> float:
-    return result["accuracy"]
-
-
-def get_truncated_ratio(
-    result: dict,
-) -> float:
-    return mean(truncated and not correct for correct, truncated in zip(result["corrects"], result["truncateds"]))
-
-
-def is_loop(
-    text: str | None,
-) -> bool:
-    return text is not None and len(text) > LOOP_TAIL_LEN and text[:-LOOP_TAIL_LEN].count(text[-LOOP_TAIL_LEN : -LOOP_TAIL_LEN + LOOP_PATTERN_LEN]) >= MIN_LOOP_COUNT
-
-
-def get_loop_ratio(
-    result: dict,
-) -> float:
-    return mean(is_loop(reasoning) or is_loop(response) for reasoning, response in zip(result["reasonings"], result["responses"]))
-
-
-def get_length_ratio(
-    result: dict,
-    bf16_result: dict,
-) -> float:
-    # bf16과 양자화 모델이 모두 맞힌 문제에서 bf16 대비 reasoning token 수 배의 중앙값
-    return median(reasoning_len / bf16_reasoning_len for reasoning_len, bf16_reasoning_len, correct, bf16_correct in zip(result["reasoning_lens"], bf16_result["reasoning_lens"], result["corrects"], bf16_result["corrects"]) if correct and bf16_correct)
 
 
 def main() -> None:
